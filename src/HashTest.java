@@ -15,7 +15,7 @@ import java.util.function.Supplier;
 
 public class HashTest {
 	private static final int SIZE = 1000;
-	private static final int TIMES = 10000;
+	private static final int TIMES = 100000;
 
 	private interface HashTester {
 		void put();
