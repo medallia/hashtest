@@ -1,3 +1,4 @@
+import com.google.common.collect.ImmutableMap;
 import net.openhft.koloboke.collect.map.hash.HashIntLongMap;
 import net.openhft.koloboke.collect.map.hash.HashIntLongMaps;
 import net.openhft.koloboke.collect.map.hash.HashIntObjMap;
@@ -96,8 +97,7 @@ public class HashTest {
 		@Override
 		public long streamSumAll() {
 			final Longholder lh = new Longholder();
-			IntLongConsumer c = (key, value) -> lh.sum += value;
-			map.forEach(c);
+			map.forEach((IntLongConsumer) (key, value) -> lh.sum += value);
 			return lh.sum;
 		}
 
@@ -127,8 +127,7 @@ public class HashTest {
 		@Override
 		public long streamSumAll() {
 			final Longholder lh = new Longholder();
-			IntObjConsumer<Long> c = (key, value) -> lh.sum += value;
-			map.forEach(c);
+			map.forEach((IntObjConsumer<Long>) (key, value) -> lh.sum += value);
 			return lh.sum;
 		}
 
@@ -145,30 +144,37 @@ public class HashTest {
 	private static void benchmark(Supplier<HashTester> constructor) {
 		System.gc();
 		System.gc();
-		System.gc();
-		System.gc();
 
 		final MemoryMXBean mbean = ManagementFactory.getMemoryMXBean();
 
 		MemoryUsage preMemory = mbean.getHeapMemoryUsage();
+
+		long putTime = Long.MAX_VALUE, streamTime = Long.MAX_VALUE, sumTime = Long.MAX_VALUE;
+
 		long startMem = preMemory.getUsed();
 
 		HashTester ht = constructor.get();
 		long sum = 0;
 
-		long start = System.nanoTime();
 		for (int i = 0; i < TIMES; ++i) {
+			final long start = System.nanoTime();
 			ht.put();
+			final long stop = System.nanoTime();
+			putTime = Long.min(putTime, stop - start);
 		}
-		long putDone = System.nanoTime();
 		for (int i = 0; i < TIMES; ++i) {
+			final long start = System.nanoTime();
 			sum += ht.streamSumAll();
+			final long stop = System.nanoTime();
+			streamTime = Long.min(streamTime, stop - start);
 		}
-		long streamDone = System.nanoTime();
+
 		for (int i = 0; i < TIMES; ++i) {
+			final long start = System.nanoTime();
 			sum += ht.getSumAll();
+			final long stop = System.nanoTime();
+			sumTime = Long.min(sumTime, stop - start);
 		}
-		long stop = System.nanoTime();
 
 		System.gc();
 		System.gc();
@@ -176,7 +182,7 @@ public class HashTest {
 		MemoryUsage postMemory = mbean.getHeapMemoryUsage();
 		long stopMem = postMemory.getUsed();
 
-		System.out.format("%30s %12d %12d %12d: %12d [%12d]\n", ht.getClass().getName(), putDone - start, streamDone - putDone, stop - streamDone, sum, stopMem - startMem);
+		System.out.format("%30s %12d %12d %12d: %12d [%12d]\n", ht.getClass().getName(), putTime, streamTime, sumTime, sum, stopMem - startMem);
 	}
 
 	private static long warmUp(Supplier<HashTester> constructor) {
